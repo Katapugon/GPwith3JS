@@ -1,0 +1,437 @@
+<html>
+<head>
+<style>
+#info{
+ position: absolute;
+ top: 0px;
+ width: 100%;
+ padding: 10px;
+ text-align: center;
+ color: #ffff00
+}
+</style>
+</head>
+<body>
+
+<div id='info'><a href="javascript:toggleCamera();">Gyro</a></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/misc/Gyroscope.js"></script>
+<script src="source/fire/Fire.js"></script>
+<script src="source/fire/FireShader.js"></script>
+<script src="source/STLLoader-master/STLLoader.js"></script>
+
+<audio id="littlefiresound" style="display:none">
+<source src="source/music/little_fire.mp3" type='audio/mp3'>
+</audio>
+<audio id="bigfiresound" style="display:none">
+<source src="source/music/big_fire.mp3" type='audio/mp3'>
+</audio>
+<audio id="BGM" autoplay loop style="display:none">
+<source src="source/music/keyframe_bgm.mp3"  type='audio/mp3'>
+</audio>
+<script>
+var camera, camera2, scene, renderer;
+var theta = 0;
+var model, leftharm, rightharm, leftlarm, rightlarm;
+var start = Date.now();
+var time;
+var fire,tex; 
+var theta1 = 0,
+  theta2 = 0;
+var pose1 = {
+	theta1: .5,
+  theta2: -.8
+}
+var pose2 = {
+	theta1: -.8,
+  theta2: .8
+}
+var keys = [
+  [0, pose1],
+  [0.5, pose2],
+  [1, pose1]
+];
+var T = 240/112;
+var clock = new THREE.Clock();
+var ts = clock.getElapsedTime();  // start time
+var intKey = [];
+var gyro
+var useGyro = true;
+var dragon, changedragonpos = false, dragonpos = 0, stopdragonpos = false;
+var showfire1 = false, showfire2 = false, showfire3 = false, showfire4 = false, showfire5 = false;
+var lfiresound, bfiresound, bgm;
+var stopsound = false;
+
+function toggleCamera(){
+ useGyro = !useGyro;
+}
+
+init();
+animate();
+
+function init() {
+  
+  lfiresound = document.getElementById ('littlefiresound');
+  bfiresound = document.getElementById ('bigfiresound');
+  bgm = document.getElementById ('BGM');
+  bgm.play();
+  
+  scene = new THREE.Scene();
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  document.body.appendChild(renderer.domElement);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+  camera.position.y = 50;
+  camera.position.x = -200;
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+  
+  camera2 = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+  camera2.position.y = 50;
+  camera2.position.x = -200;
+  let controls2 = new THREE.OrbitControls(camera2, renderer.domElement);
+
+  ////////////////////////////////////////////////////////////////
+  //var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
+  //scene.add(gridXZ);
+  /////// ////////////////////
+  let textureLoder = new THREE.TextureLoader()
+  var headMap = textureLoder.load('https://i.imgur.com/g3igXme.png')
+  var head2Map = textureLoder.load('https://i.imgur.com/QVvNXys.png')
+  var bodyMap = textureLoder.load('https://i.imgur.com/QEhtxTb.png')
+  var body2Map = textureLoder.load('https://i.imgur.com/n4RWtg8.png')
+  var body3Map = textureLoder.load('https://i.imgur.com/EGcxncv.png')
+  var body4Map = textureLoder.load('https://i.imgur.com/AMD2Mi0.png')
+  var body5Map = textureLoder.load('https://i.imgur.com/qzYWQCQ.png')
+  var handMap = textureLoder.load('https://i.imgur.com/QApLOkn.png')
+  var hand2Map = textureLoder.load('https://i.imgur.com/0wW5oom.png')
+  var hand3Map = textureLoder.load('https://i.imgur.com/S7FslFV.png')
+  var hand4Map = textureLoder.load('https://i.imgur.com/oGUCDzH.png')
+  var legMap = textureLoder.load('https://i.imgur.com/3K7HVRv.png')
+  var leg2Map = textureLoder.load('https://i.imgur.com/LXPe8TQ.png')
+  var bagMap = textureLoder.load('https://i.imgur.com/mh9mh3C.png')
+  var bag2Map = textureLoder.load('https://i.imgur.com/ciQR9VQ.png')
+  var bag3Map = textureLoder.load('https://i.imgur.com/k8K8fqD.png')
+  var bag4Map = textureLoder.load('https://i.imgur.com/cgZLfwO.png')
+  var bag5Map = textureLoder.load('https://i.imgur.com/v3kaHV3.png')
+  var secret = textureLoder.load('https://i.imgur.com/nbSVruQ.jpg');
+  var cloud = textureLoder.load('https://i.imgur.com/NgpUD5Z.jpg');
+  var wood = textureLoder.load('https://i.imgur.com/pTOOdZh.png');
+  var magic = textureLoder.load('https://i.imgur.com/XQaTgn3.png');
+  
+  var wall = new THREE.SphereGeometry(500,500,500);
+  var wallmeterial = new THREE.MeshBasicMaterial({ map : cloud, side : THREE.DoubleSide});
+  var wallsphere = new THREE.Mesh(wall,wallmeterial);
+  scene.add(wallsphere);
+  scene.background = secret;
+  
+  wood.wrapS = THREE.RepeatWrapping;
+  wood.wrapT = THREE.RepeatWrapping;
+  wood.repeat.set(4,8);
+  var plane = new THREE.MeshBasicMaterial({map : wood, side : THREE.DoubleSide});
+  var planesize = new THREE.PlaneGeometry(400,400);
+  var ground = new THREE.Mesh(planesize,plane);
+  ground.position.y = 0;
+  ground.rotation.x = Math.PI/2;
+  scene.add(ground);
+  
+  var mplane = new THREE.MeshBasicMaterial({map : magic, side : THREE.DoubleSide });
+  var mplanesize = new THREE.PlaneGeometry(120,100);
+  var mground = new THREE.Mesh(mplanesize,mplane);
+  mground.position.y = 0.1;
+  mground.rotation.x = Math.PI/2;
+  scene.add(mground);
+  
+  var headMaterials = []
+  for (var i = 0; i < 6; i++) {
+    var map
+
+    if (i == 4) map = headMap
+    else map = head2Map
+
+    headMaterials.push(new THREE.MeshBasicMaterial({ map: map }))
+  }
+  
+  var head12Materials = new THREE.MeshBasicMaterial({ map: head2Map })
+  
+  var bodyMaterials = []
+  for (i = 0; i < 6; i++) {
+    var bmap
+
+    if (i == 4) bmap = bodyMap
+	else if (i == 3) bmap = body3Map
+	else if (i == 2) bmap = body2Map
+	else if (i == 5) bmap = body5Map
+    else bmap = body4Map
+
+    bodyMaterials.push(new THREE.MeshBasicMaterial({ map: bmap }))
+  }
+ 
+  var lhandMaterials = []
+  for (i = 0; i < 6; i++) {
+    var lhmap
+
+    if (i == 1) lhmap = handMap
+	else if (i == 3) lhmap = hand3Map
+	else if (i == 2) lhmap = hand4Map
+    else lhmap = hand2Map
+
+    lhandMaterials.push(new THREE.MeshBasicMaterial({ map: lhmap }))
+  }
+ 
+  var rhandMaterials = []
+  for (i = 0; i < 6; i++) {
+    var rhmap
+
+    if (i == 0) rhmap = handMap
+	else if (i == 3) rhmap = hand3Map
+	else if (i == 2) rhmap = hand4Map
+    else rhmap = hand2Map
+
+    rhandMaterials.push(new THREE.MeshBasicMaterial({ map: rhmap }))
+  }
+  
+  var legMaterials = []
+  for (i = 0; i < 6; i++) {
+    var lmap
+
+    if (i == 3) lmap = leg2Map
+    else lmap = legMap
+
+    legMaterials.push(new THREE.MeshBasicMaterial({ map: lmap }))
+  }
+  
+  var bagMaterials = []
+  for (i = 0; i < 6; i++) {
+    var bamap
+
+    if (i == 5) bamap = bagMap
+	else if (i == 0) bamap = bag3Map
+	else if (i == 1) bamap = bag2Map
+	else if (i == 2) bamap = bag5Map
+	else if (i == 3) bamap = bag4Map
+    else bamap = bag4Map
+
+    bagMaterials.push(new THREE.MeshBasicMaterial({ map: bamap }))
+  }
+  
+  var mat = new THREE.MeshNormalMaterial();
+  model = new THREE.Group();
+  var torsobody = new THREE.Mesh (new THREE.BoxGeometry(5,10,5),bodyMaterials);
+  torsobody.position.set(0,5,0);
+  model.position.set(0,15,0);
+  model.add (torsobody);
+  scene.add (model);
+  //model.add (new THREE.AxesHelper(6));
+  
+  leftharm = new THREE.Group();
+  var lefthand = new THREE.Mesh (new THREE.BoxGeometry (1.5,13,1.5), lhandMaterials);
+  leftharm.add(lefthand);
+  //leftharm.add (new THREE.AxesHelper(6));
+  lefthand.position.set(0,-6.5,0);
+  leftharm.position.set(-3,10,0);
+  model.add (leftharm);
+
+  rightharm = new THREE.Group();
+  var righthand = new THREE.Mesh (new THREE.BoxGeometry (1.5,13,1.5), rhandMaterials);
+  rightharm.add(righthand);
+  //rightharm.add (new THREE.AxesHelper(6));
+  righthand.position.set(0,-6.5,0);
+  rightharm.position.set(3,10,0);
+  model.add (rightharm);
+  
+  leftlarm = new THREE.Group();
+  var leftleg = new THREE.Mesh (new THREE.BoxGeometry (1.5,15,1.5), legMaterials);
+  leftlarm.add(leftleg);
+  //leftlarm.add (new THREE.AxesHelper(6));
+  leftleg.position.set(0,-7.5,0);
+  leftlarm.position.set(-1.5,0,0);
+  model.add (leftlarm);
+
+  rightlarm = new THREE.Group();
+  var rightleg = new THREE.Mesh (new THREE.BoxGeometry (1.5,15,1.5), legMaterials);
+  rightlarm.add(rightleg);
+  //rightlarm.add (new THREE.AxesHelper(6));
+  rightleg.position.set(0,-7.5,0);
+  rightlarm.position.set(1.5,0,0);
+  model.add (rightlarm);
+  
+  var headbody = new THREE.Group();
+  var head = new THREE.Mesh (new THREE.BoxGeometry (5,5,5), headMaterials);
+  headbody.add(head);
+  //headbody.add (new THREE.AxesHelper(6));
+  head.position.set(0,2.5,0);
+  headbody.position.set(0,10,0);
+  model.add (headbody);
+  
+  var head1body = new THREE.Group();
+  var head1 = new THREE.Mesh (new THREE.BoxGeometry (1,1,1), head12Materials);
+  head1body.add(head1);
+  //head1body.add (new THREE.AxesHelper(6));
+  head1.position.set(0,0.5,0);
+  head1body.position.set(-2,15,0);
+  model.add (head1body);
+ 
+  var head2body = new THREE.Group();
+  var head2 = new THREE.Mesh (new THREE.BoxGeometry (1,1,1), head12Materials);
+  head2body.add(head2);
+  //head2body.add (new THREE.AxesHelper(6));
+  head2.position.set(0,0.5,0);
+  head2body.position.set(2,15,0);
+  model.add (head2body);
+  
+  var bagbody = new THREE.Group();
+  var bag = new THREE.Mesh (new THREE.BoxGeometry (4.5,4.5,2), bagMaterials);
+  bagbody.add(bag);
+  //bagbody.add (new THREE.AxesHelper(6));
+  bag.position.set(0,0,0);
+  bagbody.position.set(0,7.25,-3.5);
+  model.add (bagbody);
+  
+  ///////////////火
+  
+  tex = textureLoder.load("https://i.imgur.com/G1mtQZT.png");
+  tex2 = textureLoder.load("source/fire/Fire3.png");
+  fire1 = new THREE.Fire( tex );
+  fire1.position.set(36,15,-37);
+  fire1.scale.set(25,25,25);
+  scene.add( fire1 );
+  
+  fire2 = new THREE.Fire( tex );
+  fire2.position.set(-36,15,-37);
+  fire2.scale.set(25,25,25);
+  scene.add( fire2 );
+  
+  fire3 = new THREE.Fire( tex );
+  fire3.position.set(-36,15,37);
+  fire3.scale.set(25,25,25);
+  scene.add( fire3 );
+  
+  fire4 = new THREE.Fire( tex );
+  fire4.position.set(36,15,37);
+  fire4.scale.set(25,25,25);
+  scene.add( fire4 );
+  
+  fire5 = new THREE.Fire( tex2 );
+  fire5.position.set(0,30,0);
+  fire5.scale.set(60,60,60);
+  scene.add( fire5 );
+  
+  ///////////////模型
+  
+  var loader = new THREE.STLLoader();
+  loader.load('./source/monster-hunter-dragon/all-all-7.stl', function (geometry) {
+    var mat = new THREE.MeshLambertMaterial({color: 0x00ffff});
+    dragon = new THREE.Mesh(geometry, mat);
+    dragon.rotation.x = -0.5 * Math.PI;
+	dragon.rotation.z = -0.5 * Math.PI;
+	dragon.position.y = -100;
+    dragon.scale.set(1, 1, 1);
+    geometry.center();
+    scene.add(dragon);
+  });
+
+  var light = new THREE.PointLight(0xffffff);
+  light.position.set(-30,100,100);
+  scene.add(light);
+  
+  gyro = new THREE.Gyroscope();
+  scene.add (gyro)
+  gyro.add (camera2)
+  model.add (gyro)
+  
+}
+
+function animate() {
+  
+  time = (Date.now() - start)*0.001;
+  if(showfire1)
+    fire1.update(time);
+  if(showfire2)
+    fire2.update(time);
+  if(showfire3)
+    fire3.update(time);
+  if(showfire4)
+    fire4.update(time);
+  if(showfire5)
+    fire5.update(time);
+  if(!stopsound){
+	  if(model.position.x < 60 && model.position.x > 30 && model.position.z < -60){
+		showfire1 = true;
+		lfiresound.play();
+	  }
+	  if(model.position.x < -60 && model.position.x > -90 && model.position.z < -60){
+		showfire2 = true;
+		lfiresound.play();
+	  }
+	  if(model.position.x < -60 && model.position.x > -90 && model.position.z > 60){
+		showfire3 = true;
+		lfiresound.play();
+	  }
+	  if(model.position.x < 60 && model.position.x > 30 && model.position.z > 60){
+		showfire4 = true;
+		lfiresound.play();
+	  }
+	  if(showfire1 && showfire2 && showfire3 && showfire4 && changedragonpos){
+		showfire5 = true;
+		bfiresound.play();
+		stopsound = true;
+	  }
+  }
+  
+  theta += 0.005;
+  model.rotation.y = Math.PI + theta;
+  model.position.set(120*Math.cos(theta), 15, -120*Math.sin(theta));
+  
+  if(model.position.x > 119.9 && model.position.x < 120.1 && model.position.z >0)
+      changedragonpos = true;
+	  
+  if(changedragonpos){
+    if(!stopdragonpos){
+	   if(dragon){
+	     dragon.position.y += 0.7;
+	     if(dragon.position.y > 100)
+	       stopdragonpos = true;
+	   }
+	}
+  }
+  
+  keyframe(clock.getElapsedTime()); 
+  rightharm.rotation.x = intKey[0];
+  leftharm.rotation.x = intKey[1];
+  leftlarm.rotation.x = intKey[0];
+  rightlarm.rotation.x = intKey[1];
+  
+  camera.lookAt (model.position)
+  
+  if (useGyro)
+  	renderer.render (scene, camera)
+  else
+  	renderer.render (scene, camera2)
+  
+  requestAnimationFrame(animate);
+
+}
+
+function keyframe(t) {
+  var s = ((t - ts) % T) / T;
+
+  for (var i = 1; i < keys.length; i++) {
+    if (keys[i][0] > s) break;
+  }
+  // take i-1
+  var ii = i - 1;
+  var a = (s - keys[ii][0]) / (keys[ii + 1][0] - keys[ii][0]);
+  intKey = [keys[ii][1].theta1 * (1 - a) + keys[ii + 1][1].theta1 * a,
+            keys[ii][1].theta2 * (1 - a) + keys[ii + 1][1].theta2 * a
+  ];
+
+}
+
+</script>
+</body>
+</html>
