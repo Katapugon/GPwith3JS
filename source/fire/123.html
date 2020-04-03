@@ -1,0 +1,61 @@
+<html>
+<head>
+<style>
+
+</style>
+</head>
+<body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="Fire.js"></script>
+<script src="FireShader.js"></script>
+
+<script>
+var camera, scene, renderer;
+var start = Date.now();
+var time;
+
+init();
+animate();
+
+var fire,tex;  
+  
+function init() {
+
+  scene = new THREE.Scene();
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000);
+  document.body.appendChild(renderer.domElement);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+  camera.position.z = 3;
+
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+  
+  let textureLoder = new THREE.TextureLoader()
+  tex = textureLoder.load("https://i.imgur.com/G1mtQZT.png");
+  fire = new THREE.Fire( tex );
+  scene.add( fire );
+
+}
+function animate() {
+    
+  time = (Date.now() - start)*0.001;
+  fire.update(time);
+
+  requestAnimationFrame(animate);
+  render();
+  
+}
+function render() {
+
+  renderer.render(scene, camera);
+
+}
+
+</script>
+</body>
+</html>
