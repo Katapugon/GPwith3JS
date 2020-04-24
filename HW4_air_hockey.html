@@ -152,7 +152,6 @@ body {
 	  
 	  collisionSound = document.getElementById('collisionsound');
       BGM = document.getElementById('BGM');
-	  BGM.play();
 	  soundVal = THREE.Math.clamp (soundVal, 0, 1);
 	  collisionSound.volume = soundVal;
 	  
@@ -445,7 +444,7 @@ body {
       }
     }
     function animate() {
-	  
+	  BGM.play();
 	  camera.updateMatrix();
 	  camera.updateMatrixWorld();
 	  var frustum = new THREE.Frustum();
