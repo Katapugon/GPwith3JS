@@ -48,7 +48,6 @@ function onResize(){
 function init() {
 	
 	BGM = document.getElementById('BGM');
-	BGM.play();
 	renderer	= new THREE.WebGLRenderer({
 		// antialias	: true,
 		alpha: true
@@ -330,7 +329,7 @@ function init() {
 
 
 function animate() {
-
+	BGM.play();
 	requestAnimationFrame (animate);
 	renderer.render (scene, camera);
 	stats.update();
