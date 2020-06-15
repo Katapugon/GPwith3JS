@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+<!-- three.js library -->
+<script src='./source/three.min.js'></script>
+<script src="./source/stats.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+<!-- ar.js -->
+<script src="./source/ar.js"></script>
+<script>THREEx.ArToolkitContext.baseURL = '../'</script>
+
+<audio id="BGM" autoplay loop style="display:none">
+  <source src="./source/music/congratulations.mp3" type='audio/mp3'>
+  </audio>
+
+<body style='margin : 0px; overflow: hidden; font-family: Monospace;'>
+<script>
+
+////////////////////
+
+var renderer, scene, camera, stats;
+var arToolkitSource, arToolkitContext;
+var smoothedControls, markerRoot, smoothedRoot;
+var bgm;
+var puck;
+var raycaster;
+var mouse = new THREE.Vector2();
+var pickables = [];
+var ob = [];
+var agent,posdiff,tobdiff;
+var smoothedRoot = new THREE.Group();
+let arWorldRoot = smoothedRoot;
+let geometry	= new THREE.PlaneGeometry(2, 2);
+
+init();
+animate();
+
+
+function onResize(){
+	arToolkitSource.onResize()	
+	arToolkitSource.copySizeTo(renderer.domElement)	
+	if( arToolkitContext.arController !== null ){
+		arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)	
+	}	
+}
+
+function init() {
+	
+	BGM = document.getElementById('BGM');
+	BGM.play();
+	renderer	= new THREE.WebGLRenderer({
+		// antialias	: true,
+		alpha: true
+	});
+	renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+	// renderer.setPixelRatio( 1/2 );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.domElement.style.position = 'absolute'
+	renderer.domElement.style.top = '0px'
+	renderer.domElement.style.left = '0px'
+	document.body.appendChild( renderer.domElement );
+
+	// init scene and camera
+	scene	= new THREE.Scene();
+	
+	//////////////////////////////////////////////////////////////////////////////////
+	//		Initialize a basic camera
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// Create a camera
+	camera = new THREE.Camera();
+	scene.add(camera);
+
+	////////////////////////////////////////////////////////////////////////////////
+	//          handle arToolkitSource
+	////////////////////////////////////////////////////////////////////////////////
+
+	arToolkitSource = new THREEx.ArToolkitSource({
+		// to read from the webcam 
+		sourceType : 'webcam',
+
+		// to read from an image
+		// sourceType : 'image',
+		// sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/images/img.jpg',		
+
+		// to read from a video
+		// sourceType : 'video',
+		// sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/videos/headtracking.mp4',		
+	})
+
+	arToolkitSource.init(function onReady(){
+		onResize()
+	})
+	
+	// handle resize
+	window.addEventListener('resize', function(){
+		onResize()
+	})
+	////////////////////////////////////////////////////////////////////////////////
+	//          initialize arToolkitContext
+	////////////////////////////////////////////////////////////////////////////////
+	
+
+	// create atToolkitContext
+	arToolkitContext = new THREEx.ArToolkitContext({
+		cameraParametersUrl: './source/camera_para.dat',
+		detectionMode: 'mono',
+		maxDetectionRate: 30,
+		canvasWidth: 80*3,
+		canvasHeight: 60*3,
+	})
+	// initialize it
+	arToolkitContext.init(function onCompleted(){
+		// copy projection matrix to camera
+		camera.projectionMatrix.copy( arToolkitContext.getProjectionMatrix() );
+	})
+	
+	////////////////////////////////////////////////////////////////////////////////
+	//          Create a ArMarkerControls
+	////////////////////////////////////////////////////////////////////////////////
+	
+	markerRoot = new THREE.Group
+	scene.add(markerRoot)
+	var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+		type : 'pattern',
+		patternUrl : './source/ARmarker/pattern-tatung.patt'
+		// patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.kanji'
+	})
+
+	// build a smoothedControls
+	//smoothedRoot = new THREE.Group()
+	scene.add(smoothedRoot)
+	
+	smoothedControls = new THREEx.ArSmoothedControls(smoothedRoot, {
+		lerpPosition: 0.4,
+		lerpQuaternion: 0.3,
+		lerpScale: 1,
+	})
+
+	//////////////////////////////////////////////////////////////////////////////////
+	//		add an object in the scene
+	//////////////////////////////////////////////////////////////////////////////////
+	
+	//let arWorldRoot = smoothedRoot
+	
+	// add a torus knot	
+	var model = new THREE.Group();
+	let loader = new THREE.TextureLoader();
+	loader.crossOrigin = ""
+	let ptex = loader.load("https://i.imgur.com/waP8BFe.jpg")
+	plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 0.75), new THREE.MeshBasicMaterial({
+		map: ptex,
+		transparent: true,
+		opacity: 1,
+		visible: true
+    }));
+    arWorldRoot.add(plane);
+	model.add (plane);
+	plane.position.y	= geometry.parameters.height/2
+    plane.rotation.x = -Math.PI / 2;
+	
+	let ptex2 = loader.load("https://i.imgur.com/F6ILa1e.jpg")
+	plane2 = new THREE.Mesh(new THREE.PlaneGeometry(1.05, 0.75), new THREE.MeshBasicMaterial({
+		map: ptex2,
+		transparent: true,
+		opacity: 1,
+		visible: true
+    }));
+    arWorldRoot.add(plane2);
+	model.add (plane2);
+	plane2.position.y	= (geometry.parameters.height/2)+0.2;
+	plane2.position.z += 0.4;
+    plane2.rotation.x = -Math.PI ;
+	
+	let ptex3 = loader.load("https://i.imgur.com/ci1K9hp.jpg")
+	plane3 = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.225), new THREE.MeshBasicMaterial({
+		map: ptex3,
+		transparent: true,
+		opacity: 1,
+		visible: true
+    }));
+    arWorldRoot.add(plane3);
+	model.add (plane3);
+	plane3.position.y	= (geometry.parameters.height/2)+0.25;
+	plane3.position.z += 0.2;
+    plane3.rotation.x = -Math.PI/2 ;
+	
+	var light = new THREE.PointLight(0xffffff);
+	light.position.y = plane.position.y +1;
+	light.position.x = plane.position.x;
+	light.position.z = plane.position.z;
+	scene.add(light);
+	
+	var fontload = new THREE.FontLoader().load('source/font/Baby Eskimo Kisses_Regular.json', function(text) {
+		var textG = new THREE.TextGeometry('CONGRATULATIONS', {
+			size: 0.15,
+			height: 0.05,
+			weight: 'normal',
+			font: text,
+			style: 'normal',
+			bevelThickness: 0.005,
+			bevelSize: 0.005,
+			curveSegments: 0.15,
+			bevelEnabled: true,
+		});
+		textG.center();
+		var textM = new THREE.MeshPhongMaterial({
+			color: 0x24f2e8,
+			specular: 0xffaaaa,
+			shininess: 30,
+			shading: THREE.FlatShading
+		});
+		text = new THREE.Mesh(textG, textM);
+		text.castShadow = true;
+		text.rotation.x = -Math.PI /2;
+		text.position.x = 0;
+		text.position.y = geometry.parameters.height/2;
+		text.position.z -= 0.3;
+		arWorldRoot.add(text);
+		model.add (text);
+	})
+	  
+	var Sphere = new THREE.SphereGeometry( 0.05, 50, 50 );
+	var SphereMaterial1 = new THREE.MeshPhongMaterial({
+	color: 0xff96fa
+	});
+	var SphereMaterial2 = new THREE.MeshPhongMaterial({
+	color: 0xa6ffc2
+	});
+	var SphereMaterial3 = new THREE.MeshPhongMaterial({
+	color: 0xfffca6
+	});
+	var Sphere1 = new THREE.Mesh(Sphere, SphereMaterial1);
+	Sphere1.position.y = (geometry.parameters.height/2) +0.2;
+	Sphere1.position.x -= 0.6;
+	arWorldRoot.add(Sphere1);
+	model.add (Sphere1);
+	var Sphere2 = new THREE.Mesh(Sphere, SphereMaterial2);
+	Sphere2.position.y = (geometry.parameters.height/2) +0.15;
+	Sphere2.position.x -= 0.535;
+	Sphere2.position.z -= 0.03;
+	arWorldRoot.add(Sphere2);
+	model.add (Sphere2);
+	var Sphere3 = new THREE.Mesh(Sphere, SphereMaterial3);
+	Sphere3.position.y = (geometry.parameters.height/2) +0.2;
+	Sphere3.position.x -= 0.47;
+	arWorldRoot.add(Sphere3);
+	model.add (Sphere3);
+	
+	var Sphere4 = new THREE.Mesh(Sphere, SphereMaterial1);
+	Sphere4.position.y = (geometry.parameters.height/2) +0.2;
+	Sphere4.position.x += 0.45;
+	arWorldRoot.add(Sphere4);
+	model.add (Sphere4);
+	var Sphere5 = new THREE.Mesh(Sphere, SphereMaterial2);
+	Sphere5.position.y = (geometry.parameters.height/2) +0.15;
+	Sphere5.position.x += 0.515;
+	Sphere5.position.z -= 0.03;
+	arWorldRoot.add(Sphere5);
+	model.add (Sphere5);
+	var Sphere6 = new THREE.Mesh(Sphere, SphereMaterial3);
+	Sphere6.position.y = (geometry.parameters.height/2) +0.2;
+	Sphere6.position.x += 0.58;
+	arWorldRoot.add(Sphere6);
+	model.add (Sphere6);
+	
+	var bmesh = new THREE.Mesh (new THREE.CylinderGeometry(0.005,0.005,0.4,20),
+		new THREE.MeshBasicMaterial({color:'black'}));
+	bmesh.position.y = (geometry.parameters.height/2) +0.2;
+	bmesh.rotation.x = -Math.PI /2;
+	bmesh.position.z += 0.2;
+	bmesh.position.x -= 0.535;
+	arWorldRoot.add (bmesh)
+	model.add (bmesh);
+	var bmesh2 = new THREE.Mesh (new THREE.CylinderGeometry(0.005,0.005,0.4,20),
+		new THREE.MeshBasicMaterial({color:'black'}));
+	bmesh2.position.y = (geometry.parameters.height/2) +0.2;
+	bmesh2.rotation.x = -Math.PI /2;
+	bmesh2.rotation.z = -Math.PI /20;
+	bmesh2.position.z += 0.2;
+	bmesh2.position.x -= 0.5;
+	arWorldRoot.add (bmesh2)
+	model.add (bmesh2);
+	var bmesh3 = new THREE.Mesh (new THREE.CylinderGeometry(0.005,0.005,0.4,20),
+		new THREE.MeshBasicMaterial({color:'black'}));
+	bmesh3.position.y = (geometry.parameters.height/2) +0.2;
+	bmesh3.rotation.x = -Math.PI /2;
+	bmesh3.rotation.z =  Math.PI /20;
+	bmesh3.position.z += 0.2;
+	bmesh3.position.x -= 0.565;
+	arWorldRoot.add (bmesh3)
+	model.add (bmesh3);
+	
+	var bmesh4 = new THREE.Mesh (new THREE.CylinderGeometry(0.005,0.005,0.4,20),
+		new THREE.MeshBasicMaterial({color:'black'}));
+	bmesh4.position.y = (geometry.parameters.height/2) +0.2;
+	bmesh4.rotation.x = -Math.PI /2;
+	bmesh4.position.z += 0.2;
+	bmesh4.position.x += 0.515;
+	arWorldRoot.add (bmesh4)
+	model.add (bmesh4);
+	var bmesh5 = new THREE.Mesh (new THREE.CylinderGeometry(0.005,0.005,0.4,20),
+		new THREE.MeshBasicMaterial({color:'black'}));
+	bmesh5.position.y = (geometry.parameters.height/2) +0.2;
+	bmesh5.rotation.x = -Math.PI /2;
+	bmesh5.rotation.z = -Math.PI /20;
+	bmesh5.position.z += 0.2;
+	bmesh5.position.x += 0.55;
+	arWorldRoot.add (bmesh5)
+	model.add (bmesh5);
+	var bmesh6 = new THREE.Mesh (new THREE.CylinderGeometry(0.005,0.005,0.4,20),
+		new THREE.MeshBasicMaterial({color:'black'}));
+	bmesh6.position.y = (geometry.parameters.height/2) +0.2;
+	bmesh6.rotation.x = -Math.PI /2;
+	bmesh6.rotation.z =  Math.PI /20;
+	bmesh6.position.z += 0.2;
+	bmesh6.position.x += 0.485;
+	arWorldRoot.add (bmesh6)
+	model.add (bmesh6);
+	
+	arWorldRoot.add (model);
+	model.rotation.x = Math.PI /2.5;
+	model.position.z -= 1.5;
+
+	
+	stats = new Stats();
+	document.body.appendChild( stats.dom );
+}
+
+
+function animate() {
+
+	requestAnimationFrame (animate);
+	renderer.render (scene, camera);
+	stats.update();
+	
+	if( arToolkitSource.ready === false )	return
+
+	arToolkitContext.update( arToolkitSource.domElement )
+
+	smoothedControls.update (markerRoot)
+	
+}
+
+function render() {
+
+	renderer.render(scene, camera);
+}
+
+</script></body>
